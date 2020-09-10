@@ -11,7 +11,34 @@
 .masthead {
   height: 100vh;
   min-height: 500px;
-  background-image: url('https://source.unsplash.com/BtbjCFUvBXs/1920x1080');
+  background-image: url('https://images.unsplash.com/photo-1535350356005-fd52b3b524fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.masthead1 {
+  height: 100vh;
+  min-height: 500px;
+  background-image:  url('https://images.unsplash.com/photo-1495020689067-958852a7765e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1950&q=80');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.masthead2 {
+  height: 100vh;
+  min-height: 500px;
+  background-image:  url('https://images.unsplash.com/photo-1528642474498-1af0c17fd8c3?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1050&q=80');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.masthead3 {
+  height: 100vh;
+  min-height: 500px;
+  background-image:  url('https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1050&q=80');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -48,4 +75,32 @@
 .featurette-heading {
   margin-top: 7rem;
 }
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope&display=swap');
+
+body {
+    background-color: #eee;
+    font-family: 'Manrope', sans-serif
+}
+
+.news-card {
+    border-radius: 8px
+}
+
+.news-feed-image {
+    border-radius: 8px;
+    width: 100%
+}
+
+.date {
+    font-size: 12px
+}
+
+.username {
+    color: blue
+}
+
+.share {
+    color: blue
 }
