@@ -8,6 +8,10 @@
   background-size: cover;
 }
 
+.carousel-caption {
+  background: rgba(128, 128, 128);
+}
+
 .masthead {
   height: 100vh;
   min-height: 500px;
