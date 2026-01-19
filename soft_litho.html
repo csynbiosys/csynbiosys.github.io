@@ -1,0 +1,3189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Virtual Microfluidics Lab - Lab on Chip Technologies</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+            touch-action: none;
+        }
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        #canvas {
+            display: block;
+        }
+
+        /* UI Overlay */
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Header */
+        #header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 40px;
+            border-radius: 30px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);
+            z-index: 10;
+        }
+        #header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        #header .step-indicator {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Progress Bar */
+        #progressContainer {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            max-width: 90%;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #progressBar {
+            height: 100%;
+            background: linear-gradient(90deg, #00f260, #0575e6);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* Instructions Panel */
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px 30px;
+            border-radius: 15px;
+            color: white;
+            max-width: 600px;
+            text-align: center;
+            pointer-events: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 10;
+        }
+        #instructions h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        #instructions p {
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        #instructions .hint {
+            font-size: 13px;
+            color: #aaa;
+            font-style: italic;
+        }
+
+        /* Action Button */
+        #actionBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+        }
+        #actionBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.5);
+        }
+        #actionBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Info Panel (Side) */
+        #infoPanel {
+            position: absolute;
+            top: 140px;
+            right: 20px;
+            width: 280px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+        }
+        #infoPanel h4 {
+            color: #00f260;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        #infoPanel ul {
+            list-style: none;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        #infoPanel li {
+            padding-left: 20px;
+            position: relative;
+        }
+        #infoPanel li::before {
+            content: '>';
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+
+        /* Score Display */
+        #scoreDisplay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 25px;
+            border-radius: 15px;
+            color: white;
+            text-align: center;
+        }
+        #scoreDisplay .score {
+            font-size: 32px;
+            font-weight: bold;
+            color: #00f260;
+        }
+        #scoreDisplay .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+
+        /* Tooltip */
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            max-width: 200px;
+            border: 1px solid #667eea;
+            z-index: 1000;
+        }
+
+        /* Task Selection Modal */
+        #taskModal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        #taskModal .content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 900px;
+            width: 100%;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        #taskModal h2 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        #taskModal .subtitle {
+            color: #999;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .task-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .task-card {
+            background: rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .task-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        .task-card.selected {
+            border-color: #00f260;
+            background: rgba(0, 242, 96, 0.1);
+        }
+        .task-card .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .task-card h3 {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .task-card .difficulty {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .task-card .difficulty.beginner { background: #00f260; color: #000; }
+        .task-card .difficulty.intermediate { background: #f59e0b; color: #000; }
+        .task-card .difficulty.advanced { background: #ef4444; color: #fff; }
+        .task-card p {
+            color: #aaa;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .task-card .details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .task-card.expanded .details {
+            max-height: 300px;
+        }
+        .task-card .expand-btn {
+            color: #667eea;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .task-card .criteria {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+        .task-card .criteria h4 {
+            color: #00f260;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .task-card .criteria li {
+            color: #ccc;
+            font-size: 11px;
+            margin-bottom: 4px;
+            padding-left: 15px;
+            position: relative;
+        }
+        .task-card .criteria li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00f260;
+        }
+        #beginDesignBtn {
+            display: block;
+            margin: 30px auto 0;
+            background: linear-gradient(135deg, #00f260 0%, #0575e6 100%);
+            border: none;
+            color: white;
+            padding: 15px 50px;
+            border-radius: 25px;
+            font-size: 18px;
+            cursor: pointer;
+            opacity: 0.5;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        #beginDesignBtn.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #beginDesignBtn.active:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 30px rgba(0, 242, 96, 0.4);
+        }
+
+        /* Drawing Interface */
+        #drawingInterface {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            pointer-events: auto;
+            z-index: 50;
+        }
+        #drawingCanvas {
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0d1117;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            cursor: crosshair;
+        }
+        #drawingToolbar {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .tool-btn {
+            display: block;
+            width: 50px;
+            height: 50px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            color: white;
+            font-size: 20px;
+            transition: all 0.2s ease;
+        }
+        .tool-btn:hover {
+            background: rgba(102, 126, 234, 0.4);
+        }
+        .tool-btn.active {
+            border-color: #00f260;
+            background: rgba(0, 242, 96, 0.2);
+        }
+        .tool-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+        .toolbar-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+            margin: 10px 0;
+        }
+        #undoBtn, #redoBtn {
+            width: 50px;
+            height: 35px;
+            font-size: 14px;
+        }
+
+        /* Validation Panel */
+        #validationPanel {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            width: 280px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+        }
+        #validationPanel h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .validation-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .validation-item .status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        .validation-item .status.pass { background: #00f260; color: #000; }
+        .validation-item .status.fail { background: #ef4444; }
+        .validation-item .status.warn { background: #f59e0b; color: #000; }
+
+        /* 3D Preview */
+        #previewContainer {
+            position: absolute;
+            bottom: 150px;
+            right: 20px;
+            width: 280px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+        #previewCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        #previewLabel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #667eea;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        /* Drawing Controls */
+        #drawingControls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+        }
+        .drawing-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .drawing-btn:hover {
+            transform: scale(1.05);
+        }
+        .drawing-btn.secondary {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .drawing-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Port Configuration */
+        #portConfigOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            pointer-events: auto;
+            z-index: 50;
+        }
+        #portConfigPanel {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+        }
+        #portConfigPanel h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .port-item {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .port-item h5 {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .port-item .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .port-item select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            background: #1a1a2e;
+            color: white;
+            border: 1px solid #667eea;
+            margin-bottom: 8px;
+        }
+        .detection-zone-marker {
+            position: absolute;
+            background: rgba(239, 68, 68, 0.3);
+            border: 2px dashed #ef4444;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Flow Simulation */
+        #flowSimOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            pointer-events: none;
+            z-index: 40;
+        }
+        #flowControls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px 30px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            pointer-events: auto;
+        }
+        #flowControls label {
+            color: white;
+            font-size: 14px;
+        }
+        #speedSlider {
+            width: 150px;
+        }
+        #metricsPanel {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            width: 280px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            pointer-events: auto;
+        }
+        #metricsPanel h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .metric {
+            margin-bottom: 15px;
+        }
+        .metric .label {
+            font-size: 12px;
+            color: #aaa;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .metric .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00f260;
+        }
+        .metric .bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .metric .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f260, #0575e6);
+            transition: width 0.3s ease;
+        }
+
+        /* Completion Modal */
+        #completionModal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        #completionModal .content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 40px 50px;
+            border-radius: 20px;
+            max-width: 500px;
+            text-align: center;
+            border: 1px solid rgba(0, 242, 96, 0.3);
+        }
+        #completionModal h2 {
+            color: #00f260;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        #completionModal .final-score {
+            font-size: 64px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        .completion-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .completion-metric {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .completion-metric .label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+        }
+        .completion-metric .value {
+            font-size: 24px;
+            color: #00f260;
+            font-weight: bold;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(102, 126, 234, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.8); }
+        }
+        .glow {
+            animation: glow 1.5s infinite;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            #header h1 { font-size: 18px; }
+            #infoPanel { display: none; }
+            #validationPanel { width: 200px; font-size: 11px; }
+            #drawingToolbar { padding: 10px; }
+            .tool-btn { width: 40px; height: 40px; font-size: 16px; }
+            .task-cards { grid-template-columns: 1fr; }
+            #taskModal .content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+
+        <div id="ui">
+            <!-- Header -->
+            <div id="header">
+                <h1>Virtual Microfluidics Lab</h1>
+                <div class="step-indicator"><span id="phaseIndicator">Select Task</span></div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div id="progressContainer">
+                <div id="progressBar"></div>
+            </div>
+
+            <!-- Score Display -->
+            <div id="scoreDisplay">
+                <div class="label">Score</div>
+                <div class="score" id="score">0</div>
+            </div>
+
+            <!-- Info Panel -->
+            <div id="infoPanel">
+                <h4>Key Concepts</h4>
+                <ul id="conceptsList">
+                    <li>Microfluidics manipulates tiny fluid volumes</li>
+                    <li>Laminar flow dominates at microscale</li>
+                    <li>Diffusion enables mixing</li>
+                    <li>Channel geometry controls flow</li>
+                </ul>
+            </div>
+
+            <!-- Instructions -->
+            <div id="instructions">
+                <h3 id="stepTitle">Welcome to the Virtual Lab</h3>
+                <p id="stepDescription">Design, fabricate, and test microfluidic devices through interactive simulation.</p>
+                <p class="hint" id="stepHint">Select a design challenge to begin</p>
+                <button id="actionBtn" style="display: none;">Continue</button>
+            </div>
+
+            <!-- Tooltip -->
+            <div id="tooltip"></div>
+
+            <!-- Task Selection Modal -->
+            <div id="taskModal">
+                <div class="content">
+                    <h2>Choose Your Design Challenge</h2>
+                    <p class="subtitle">Select a microfluidic device to design and fabricate</p>
+                    <div class="task-cards">
+                        <!-- Reagent Mixer -->
+                        <div class="task-card" data-task="mixer">
+                            <div class="icon">🧪</div>
+                            <span class="difficulty beginner">Beginner</span>
+                            <h3>Reagent Mixer</h3>
+                            <p>Design a device to efficiently mix two fluid streams using passive mixing techniques.</p>
+                            <div class="expand-btn">Learn more ▼</div>
+                            <div class="details">
+                                <div class="criteria">
+                                    <h4>Success Criteria</h4>
+                                    <ul>
+                                        <li>2+ inlet ports</li>
+                                        <li>1+ outlet port</li>
+                                        <li>Serpentine mixing channel</li>
+                                        <li>>80% mixing efficiency</li>
+                                    </ul>
+                                </div>
+                                <p style="margin-top: 15px; font-size: 11px; color: #888;">
+                                    <strong>Educational Context:</strong> Passive micromixers rely on diffusion enhanced by increased path length. Serpentine channels create chaotic advection that improves mixing at low Reynolds numbers.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Cell Sorter -->
+                        <div class="task-card" data-task="sorter">
+                            <div class="icon">🔬</div>
+                            <span class="difficulty intermediate">Intermediate</span>
+                            <h3>Cell Sorter</h3>
+                            <p>Create a device that separates particles based on size using hydrodynamic focusing.</p>
+                            <div class="expand-btn">Learn more ▼</div>
+                            <div class="details">
+                                <div class="criteria">
+                                    <h4>Success Criteria</h4>
+                                    <ul>
+                                        <li>Sample + sheath flow inlets</li>
+                                        <li>Bifurcation junction</li>
+                                        <li>2+ sorted outlets</li>
+                                        <li>>70% sorting purity</li>
+                                    </ul>
+                                </div>
+                                <p style="margin-top: 15px; font-size: 11px; color: #888;">
+                                    <strong>Educational Context:</strong> Size-based sorting exploits differential inertial focusing. Larger particles migrate faster to equilibrium positions, enabling separation at channel bifurcations.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- COVID Diagnostic -->
+                        <div class="task-card" data-task="covid">
+                            <div class="icon">🏥</div>
+                            <span class="difficulty advanced">Advanced</span>
+                            <h3>COVID-19 Diagnostic</h3>
+                            <p>Design a point-of-care device with sample processing and detection zones.</p>
+                            <div class="expand-btn">Learn more ▼</div>
+                            <div class="details">
+                                <div class="criteria">
+                                    <h4>Success Criteria</h4>
+                                    <ul>
+                                        <li>Sample inlet port</li>
+                                        <li>Test detection zone</li>
+                                        <li>Control detection zone</li>
+                                        <li>100% zone coverage</li>
+                                    </ul>
+                                </div>
+                                <p style="margin-top: 15px; font-size: 11px; color: #888;">
+                                    <strong>Educational Context:</strong> Lateral flow assays use capillary action to transport sample across functionalized zones. The test line captures target analytes while the control line validates proper flow.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="beginDesignBtn">Begin Design</button>
+                </div>
+            </div>
+
+            <!-- Drawing Interface -->
+            <div id="drawingInterface">
+                <canvas id="drawingCanvas" width="600" height="400"></canvas>
+
+                <div id="drawingToolbar">
+                    <button class="tool-btn active" data-tool="select" title="Select">↖</button>
+                    <button class="tool-btn" data-tool="channel" title="Straight Channel">━</button>
+                    <button class="tool-btn" data-tool="curve" title="Curved Channel">⌒</button>
+                    <button class="tool-btn" data-tool="junction" title="Y-Junction">⑂</button>
+                    <button class="tool-btn" data-tool="well" title="Well/Port">○</button>
+                    <div class="toolbar-divider"></div>
+                    <button class="tool-btn" id="undoBtn" title="Undo">↩</button>
+                    <button class="tool-btn" id="redoBtn" title="Redo">↪</button>
+                </div>
+
+                <div id="validationPanel">
+                    <h4>Design Requirements</h4>
+                    <div id="validationList"></div>
+                </div>
+
+                <div id="previewContainer">
+                    <span id="previewLabel">3D Preview</span>
+                    <canvas id="previewCanvas"></canvas>
+                </div>
+
+                <div id="drawingControls">
+                    <button class="drawing-btn secondary" id="clearDrawingBtn">Clear All</button>
+                    <button class="drawing-btn" id="finishDrawingBtn" disabled>Proceed to Fabrication →</button>
+                </div>
+            </div>
+
+            <!-- Port Configuration Overlay -->
+            <div id="portConfigOverlay">
+                <div id="portConfigPanel">
+                    <h4>Configure Ports</h4>
+                    <p style="font-size: 12px; color: #aaa; margin-bottom: 15px;">
+                        Click wells in the 3D view to configure inlets, outlets, and reagents.
+                    </p>
+                    <div id="portList"></div>
+                    <button class="drawing-btn" id="finishPortConfigBtn" style="margin-top: 15px; width: 100%;" disabled>
+                        Start Simulation →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Flow Simulation Overlay -->
+            <div id="flowSimOverlay">
+                <div id="metricsPanel">
+                    <h4>Simulation Metrics</h4>
+                    <div class="metric" id="primaryMetric">
+                        <div class="label">Efficiency</div>
+                        <div class="value">0%</div>
+                        <div class="bar"><div class="bar-fill" style="width: 0%"></div></div>
+                    </div>
+                    <div class="metric" id="secondaryMetric">
+                        <div class="label">Throughput</div>
+                        <div class="value">0</div>
+                    </div>
+                    <div class="metric" id="timeMetric">
+                        <div class="label">Simulation Time</div>
+                        <div class="value">0.0s</div>
+                    </div>
+                </div>
+                <div id="flowControls">
+                    <button class="drawing-btn" id="playPauseBtn">⏸ Pause</button>
+                    <label>Speed: <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1"></label>
+                    <button class="drawing-btn secondary" id="resetSimBtn">Reset</button>
+                    <button class="drawing-btn" id="finishSimBtn">Complete Lab →</button>
+                </div>
+            </div>
+
+            <!-- Completion Modal -->
+            <div id="completionModal">
+                <div class="content">
+                    <h2>🎉 Lab Complete!</h2>
+                    <p id="completionTaskName">Reagent Mixer</p>
+                    <div class="final-score" id="finalScore">0</div>
+                    <p style="color: #999;">Points Earned</p>
+                    <div class="completion-metrics">
+                        <div class="completion-metric">
+                            <div class="label">Design Score</div>
+                            <div class="value" id="designScore">0</div>
+                        </div>
+                        <div class="completion-metric">
+                            <div class="label">Efficiency</div>
+                            <div class="value" id="efficiencyScore">0%</div>
+                        </div>
+                        <div class="completion-metric">
+                            <div class="label">Fabrication</div>
+                            <div class="value" id="fabScore">0</div>
+                        </div>
+                        <div class="completion-metric">
+                            <div class="label">Time Bonus</div>
+                            <div class="value" id="timeBonus">0</div>
+                        </div>
+                    </div>
+                    <button id="restartBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; padding: 15px 40px; border-radius: 25px; font-size: 16px; cursor: pointer; margin-top: 20px;">Try Another Challenge</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // ===========================================
+        // TASK DEFINITIONS
+        // ===========================================
+        const TASKS = {
+            mixer: {
+                name: 'Reagent Mixer',
+                icon: '🧪',
+                difficulty: 'beginner',
+                description: 'Mix two fluid streams efficiently',
+                requirements: {
+                    minInlets: 2,
+                    minOutlets: 1,
+                    needsSerpentine: true,
+                    needsBifurcation: false,
+                    needsDetectionZones: false
+                },
+                reagents: [
+                    { id: 'buffer', name: 'Buffer Solution', color: 0x3b82f6 },
+                    { id: 'dye', name: 'Sample/Dye', color: 0xf97316 }
+                ],
+                metrics: {
+                    primary: 'mixingEfficiency',
+                    primaryLabel: 'Mixing Efficiency',
+                    target: 80
+                },
+                concepts: [
+                    'Laminar flow limits mixing',
+                    'Serpentine channels increase path length',
+                    'Diffusion drives passive mixing',
+                    'Chaotic advection enhances mixing'
+                ]
+            },
+            sorter: {
+                name: 'Cell Sorter',
+                icon: '🔬',
+                difficulty: 'intermediate',
+                description: 'Separate particles by size',
+                requirements: {
+                    minInlets: 2,
+                    minOutlets: 2,
+                    needsSerpentine: false,
+                    needsBifurcation: true,
+                    needsDetectionZones: false
+                },
+                reagents: [
+                    { id: 'sheath', name: 'Sheath Flow', color: 0x3b82f6 },
+                    { id: 'cells', name: 'Cell Suspension', color: 0xef4444 }
+                ],
+                metrics: {
+                    primary: 'sortingPurity',
+                    primaryLabel: 'Sorting Purity',
+                    target: 70
+                },
+                concepts: [
+                    'Inertial focusing positions particles',
+                    'Larger particles migrate faster',
+                    'Sheath flow provides hydrodynamic focusing',
+                    'Bifurcations enable separation'
+                ]
+            },
+            covid: {
+                name: 'COVID-19 Diagnostic',
+                icon: '🏥',
+                difficulty: 'advanced',
+                description: 'Point-of-care detection device',
+                requirements: {
+                    minInlets: 1,
+                    minOutlets: 1,
+                    needsSerpentine: false,
+                    needsBifurcation: false,
+                    needsDetectionZones: true
+                },
+                reagents: [
+                    { id: 'sample', name: 'Patient Sample', color: 0xf97316 },
+                    { id: 'buffer', name: 'Running Buffer', color: 0x3b82f6 }
+                ],
+                metrics: {
+                    primary: 'zoneCoverage',
+                    primaryLabel: 'Detection Coverage',
+                    target: 100
+                },
+                concepts: [
+                    'Capillary action drives flow',
+                    'Test line captures target analytes',
+                    'Control line validates flow',
+                    'Colorimetric detection shows results'
+                ]
+            }
+        };
+
+        // ===========================================
+        // GAME STATE
+        // ===========================================
+        const gameState = {
+            currentPhase: 0,  // 0=TaskSelect, 1=Draw, 2=SoftLitho, 3=PortConfig, 4=FlowSim, 5=Complete
+            selectedTask: null,
+            softLithoStep: 0,
+            score: 0,
+            isAnimating: false,
+            objects: {},
+            materials: {},
+            userPattern: null,
+            portAssignments: {},
+            detectionZones: [],
+            flowState: {
+                particles: [],
+                efficiency: 0,
+                throughput: 0,
+                isRunning: false,
+                speed: 1,
+                time: 0
+            },
+            undoStack: [],
+            redoStack: [],
+            startTime: null
+        };
+
+        // ===========================================
+        // USER PATTERN CLASS
+        // ===========================================
+        class UserPattern {
+            constructor() {
+                this.elements = [];
+                this.gridSize = 20;  // pixels
+                this.channelWidth = 0.15;
+                this.channelDepth = 0.1;
+            }
+
+            addElement(element) {
+                this.elements.push(element);
+            }
+
+            removeElement(index) {
+                this.elements.splice(index, 1);
+            }
+
+            clear() {
+                this.elements = [];
+            }
+
+            getWells() {
+                return this.elements.filter(e => e.type === 'well');
+            }
+
+            getChannels() {
+                return this.elements.filter(e => e.type === 'channel' || e.type === 'curve');
+            }
+
+            hasConnection() {
+                const wells = this.getWells();
+                const channels = this.getChannels();
+                if (wells.length < 2 || channels.length === 0) return false;
+                return true;
+            }
+
+            hasSerpentine() {
+                const channels = this.getChannels();
+                let turns = 0;
+                for (let i = 1; i < channels.length; i++) {
+                    const prev = channels[i-1];
+                    const curr = channels[i];
+                    if (prev.type === 'channel' && curr.type === 'channel') {
+                        const prevDir = Math.atan2(prev.params.end.y - prev.params.start.y,
+                                                   prev.params.end.x - prev.params.start.x);
+                        const currDir = Math.atan2(curr.params.end.y - curr.params.start.y,
+                                                   curr.params.end.x - curr.params.start.x);
+                        if (Math.abs(prevDir - currDir) > 0.5) turns++;
+                    }
+                }
+                return turns >= 2;
+            }
+
+            hasBifurcation() {
+                return this.elements.some(e => e.type === 'junction');
+            }
+
+            clone() {
+                const copy = new UserPattern();
+                copy.elements = JSON.parse(JSON.stringify(this.elements));
+                copy.gridSize = this.gridSize;
+                copy.channelWidth = this.channelWidth;
+                copy.channelDepth = this.channelDepth;
+                return copy;
+            }
+        }
+
+        // ===========================================
+        // SOFT LITHOGRAPHY STEPS
+        // ===========================================
+        const softLithoSteps = [
+            {
+                title: "Prepare the Silicon Wafer",
+                description: "The process begins with a clean silicon wafer serving as the substrate for our master mold.",
+                hint: "Click 'Spin Coat' to apply photoresist",
+                action: "Spin Coat",
+                concepts: ["Silicon wafer is the base substrate", "Must be extremely clean", "Flatness is critical", "Surface treatment may be needed"]
+            },
+            {
+                title: "Apply Photoresist (SU-8)",
+                description: "SU-8 photoresist is spin-coated onto the wafer. The spinning creates a uniform thin film.",
+                hint: "Click 'Expose UV' to pattern the photoresist",
+                action: "Expose UV",
+                concepts: ["SU-8 is a negative photoresist", "Spin speed controls thickness", "Typical thickness: 10-200 µm", "Soft bake removes solvents"]
+            },
+            {
+                title: "UV Exposure Through Photomask",
+                description: "UV light shines through a photomask containing your custom design. Exposed SU-8 cross-links and hardens.",
+                hint: "Click 'Develop' to remove unexposed photoresist",
+                action: "Develop",
+                concepts: ["Your design is on the photomask", "UV causes cross-linking", "Exposure time is critical", "Post-exposure bake enhances cross-linking"]
+            },
+            {
+                title: "Pour PDMS Prepolymer",
+                description: "PDMS is mixed with curing agent (10:1 ratio) and poured over your master mold pattern.",
+                hint: "Click 'Cure PDMS' to heat and solidify",
+                action: "Cure PDMS",
+                concepts: ["PDMS is biocompatible", "10:1 base to curing agent ratio", "Degassing prevents bubbles", "PDMS conforms to nanoscale features"]
+            },
+            {
+                title: "Thermal Curing",
+                description: "The PDMS is cured at elevated temperature, transforming the liquid into a flexible solid with your channel pattern.",
+                hint: "Click 'Peel Stamp' to separate PDMS from mold",
+                action: "Peel Stamp",
+                concepts: ["Curing at 65°C for ~2 hours", "PDMS becomes elastic", "Channel imprints form", "Slight shrinkage (~1%)"]
+            },
+            {
+                title: "Bond to Glass Substrate",
+                description: "The PDMS stamp is bonded to a glass substrate using plasma treatment, creating sealed microfluidic channels.",
+                hint: "Click 'Complete' to finish fabrication",
+                action: "Complete",
+                concepts: ["Plasma activates surfaces", "Permanent covalent bonding", "Sealed channels for fluids", "Ready for testing"]
+            }
+        ];
+
+        // ===========================================
+        // THREE.JS SETUP
+        // ===========================================
+        let scene, camera, renderer, controls;
+        let previewScene, previewCamera, previewRenderer;
+        let animationId;
+
+        function init() {
+            // Main Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(5, 5, 5);
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 3;
+            controls.maxDistance = 15;
+
+            setupLighting();
+            createLabEnvironment();
+
+            // Preview Scene (for drawing phase)
+            setupPreviewScene();
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            setupEventListeners();
+
+            animate();
+        }
+
+        function setupPreviewScene() {
+            previewScene = new THREE.Scene();
+            previewScene.background = new THREE.Color(0x0d1117);
+
+            previewCamera = new THREE.PerspectiveCamera(50, 280 / 200, 0.1, 100);
+            previewCamera.position.set(3, 3, 3);
+            previewCamera.lookAt(0, 0, 0);
+
+            const previewCanvas = document.getElementById('previewCanvas');
+            previewRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true });
+            previewRenderer.setSize(280, 200);
+
+            // Simple lighting for preview
+            previewScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const light = new THREE.DirectionalLight(0xffffff, 0.8);
+            light.position.set(5, 5, 5);
+            previewScene.add(light);
+        }
+
+        function setupLighting() {
+            const ambient = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambient);
+
+            const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            mainLight.position.set(5, 10, 5);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            scene.add(mainLight);
+
+            const fillLight = new THREE.DirectionalLight(0x667eea, 0.3);
+            fillLight.position.set(-5, 5, -5);
+            scene.add(fillLight);
+
+            const rimLight = new THREE.DirectionalLight(0x00f260, 0.2);
+            rimLight.position.set(0, -5, 5);
+            scene.add(rimLight);
+        }
+
+        function createLabEnvironment() {
+            // Lab table
+            const tableGeometry = new THREE.BoxGeometry(8, 0.2, 6);
+            const tableMaterial = new THREE.MeshStandardMaterial({
+                color: 0x2d3436,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const table = new THREE.Mesh(tableGeometry, tableMaterial);
+            table.position.y = -0.5;
+            table.receiveShadow = true;
+            scene.add(table);
+
+            const gridHelper = new THREE.GridHelper(6, 20, 0x667eea, 0x333333);
+            gridHelper.position.y = -0.39;
+            scene.add(gridHelper);
+
+            createLabEquipment();
+        }
+
+        function createLabEquipment() {
+            // Microscope
+            const microscopeGroup = new THREE.Group();
+            const base = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.3, 0.35, 0.1, 32),
+                new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 })
+            );
+            microscopeGroup.add(base);
+
+            const arm = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, 0.8, 0.1),
+                new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8 })
+            );
+            arm.position.set(-0.1, 0.4, 0);
+            microscopeGroup.add(arm);
+
+            const eyepiece = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.08, 0.06, 0.2, 16),
+                new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.9 })
+            );
+            eyepiece.position.set(0.1, 0.7, 0);
+            eyepiece.rotation.z = Math.PI / 6;
+            microscopeGroup.add(eyepiece);
+
+            microscopeGroup.position.set(-2.5, -0.35, -2);
+            scene.add(microscopeGroup);
+
+            // Beakers
+            for (let i = 0; i < 3; i++) {
+                const beaker = createBeaker();
+                beaker.position.set(2.5, -0.2, -1.5 + i * 0.8);
+                beaker.scale.setScalar(0.5 + Math.random() * 0.3);
+                scene.add(beaker);
+            }
+        }
+
+        function createBeaker() {
+            const beakerGroup = new THREE.Group();
+            const glass = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.2, 0.18, 0.5, 32, 1, true),
+                new THREE.MeshStandardMaterial({
+                    color: 0xaaddff,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                })
+            );
+            beakerGroup.add(glass);
+
+            const liquid = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.18, 0.16, 0.3, 32),
+                new THREE.MeshStandardMaterial({
+                    color: Math.random() > 0.5 ? 0x667eea : 0x00f260,
+                    transparent: true,
+                    opacity: 0.6
+                })
+            );
+            liquid.position.y = -0.05;
+            beakerGroup.add(liquid);
+
+            return beakerGroup;
+        }
+
+        // ===========================================
+        // PATTERN TO 3D CONVERSION
+        // ===========================================
+        function convertPatternTo3D(userPattern, material, height, isInverse = false) {
+            const group = new THREE.Group();
+            const scale = 3 / 600;  // Convert from canvas pixels to 3D units
+
+            userPattern.elements.forEach(el => {
+                let mesh;
+
+                if (el.type === 'channel') {
+                    const dx = el.params.end.x - el.params.start.x;
+                    const dy = el.params.end.y - el.params.start.y;
+                    const length = Math.sqrt(dx * dx + dy * dy) * scale;
+                    const angle = Math.atan2(dy, dx);
+
+                    const geometry = new THREE.BoxGeometry(length, height, el.params.width * scale);
+                    mesh = new THREE.Mesh(geometry, material.clone());
+
+                    const centerX = ((el.params.start.x + el.params.end.x) / 2 - 300) * scale;
+                    const centerY = ((el.params.start.y + el.params.end.y) / 2 - 200) * scale;
+
+                    mesh.position.set(centerX, height / 2, centerY);
+                    mesh.rotation.y = -angle;
+                }
+                else if (el.type === 'well') {
+                    const geometry = new THREE.CylinderGeometry(
+                        el.params.radius * scale,
+                        el.params.radius * scale,
+                        height,
+                        32
+                    );
+                    mesh = new THREE.Mesh(geometry, material.clone());
+
+                    const x = (el.params.center.x - 300) * scale;
+                    const z = (el.params.center.y - 200) * scale;
+                    mesh.position.set(x, height / 2, z);
+                }
+                else if (el.type === 'curve') {
+                    const curve = new THREE.QuadraticBezierCurve3(
+                        new THREE.Vector3((el.params.start.x - 300) * scale, 0, (el.params.start.y - 200) * scale),
+                        new THREE.Vector3((el.params.control.x - 300) * scale, 0, (el.params.control.y - 200) * scale),
+                        new THREE.Vector3((el.params.end.x - 300) * scale, 0, (el.params.end.y - 200) * scale)
+                    );
+
+                    const points = curve.getPoints(20);
+                    for (let i = 0; i < points.length - 1; i++) {
+                        const p1 = points[i];
+                        const p2 = points[i + 1];
+                        const dx = p2.x - p1.x;
+                        const dz = p2.z - p1.z;
+                        const segLen = Math.sqrt(dx * dx + dz * dz);
+                        const angle = Math.atan2(dz, dx);
+
+                        const segGeom = new THREE.BoxGeometry(segLen * 1.1, height, el.params.width * scale);
+                        const segMesh = new THREE.Mesh(segGeom, material.clone());
+                        segMesh.position.set((p1.x + p2.x) / 2, height / 2, (p1.z + p2.z) / 2);
+                        segMesh.rotation.y = -angle;
+                        group.add(segMesh);
+                    }
+                    return;  // Already added segments
+                }
+                else if (el.type === 'junction') {
+                    // Y-junction: create three channels meeting at center
+                    const center = el.params.center;
+                    const armLength = 40 * scale;
+                    const angles = el.params.angles || [0, 2.1, -2.1];
+
+                    angles.forEach(angle => {
+                        const geometry = new THREE.BoxGeometry(armLength, height, 15 * scale);
+                        const armMesh = new THREE.Mesh(geometry, material.clone());
+
+                        const x = (center.x - 300) * scale + Math.cos(angle) * armLength / 2;
+                        const z = (center.y - 200) * scale + Math.sin(angle) * armLength / 2;
+
+                        armMesh.position.set(x, height / 2, z);
+                        armMesh.rotation.y = -angle;
+                        group.add(armMesh);
+                    });
+
+                    // Center circle
+                    const centerGeom = new THREE.CylinderGeometry(10 * scale, 10 * scale, height, 16);
+                    const centerMesh = new THREE.Mesh(centerGeom, material.clone());
+                    centerMesh.position.set((center.x - 300) * scale, height / 2, (center.y - 200) * scale);
+                    group.add(centerMesh);
+                    return;
+                }
+
+                if (mesh) {
+                    mesh.castShadow = true;
+                    group.add(mesh);
+                }
+            });
+
+            return group;
+        }
+
+        // ===========================================
+        // DRAWING CANVAS
+        // ===========================================
+        let drawingCtx;
+        let currentTool = 'select';
+        let isDrawing = false;
+        let drawStart = null;
+        let lastDrawPos = null;
+        let selectedElement = null;
+
+        function initDrawingCanvas() {
+            const canvas = document.getElementById('drawingCanvas');
+            drawingCtx = canvas.getContext('2d');
+
+            // Touch and mouse events
+            canvas.addEventListener('mousedown', onDrawStart);
+            canvas.addEventListener('mousemove', onDrawMove);
+            canvas.addEventListener('mouseup', onDrawEnd);
+            canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+            canvas.addEventListener('touchend', onTouchEnd);
+
+            gameState.userPattern = new UserPattern();
+            renderDrawingCanvas();
+        }
+
+        function getTouchPos(canvas, touch) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
+            };
+        }
+
+        function onTouchStart(e) {
+            e.preventDefault();
+            const pos = getTouchPos(e.target, e.touches[0]);
+            handleDrawStart(pos.x, pos.y);
+        }
+
+        function onTouchMove(e) {
+            e.preventDefault();
+            const pos = getTouchPos(e.target, e.touches[0]);
+            handleDrawMove(pos.x, pos.y);
+        }
+
+        function onTouchEnd(e) {
+            // lastDrawPos is already set from touchmove, so just finalize
+            handleDrawEnd();
+        }
+
+        function onDrawStart(e) {
+            handleDrawStart(e.offsetX, e.offsetY);
+        }
+
+        function onDrawMove(e) {
+            handleDrawMove(e.offsetX, e.offsetY);
+        }
+
+        function onDrawEnd() {
+            handleDrawEnd();
+        }
+
+        function snapToGrid(x, y) {
+            const grid = gameState.userPattern.gridSize;
+            return {
+                x: Math.round(x / grid) * grid,
+                y: Math.round(y / grid) * grid
+            };
+        }
+
+        function handleDrawStart(x, y) {
+            const snapped = snapToGrid(x, y);
+            isDrawing = true;
+            drawStart = snapped;
+
+            if (currentTool === 'well') {
+                saveState();
+                gameState.userPattern.addElement({
+                    type: 'well',
+                    params: { center: snapped, radius: 20 }
+                });
+                renderDrawingCanvas();
+                updatePreview();
+                validateDesign();
+                isDrawing = false;
+            }
+            else if (currentTool === 'junction') {
+                saveState();
+                gameState.userPattern.addElement({
+                    type: 'junction',
+                    params: { center: snapped, angles: [0, 2.1, -2.1] }
+                });
+                renderDrawingCanvas();
+                updatePreview();
+                validateDesign();
+                isDrawing = false;
+            }
+            else if (currentTool === 'select') {
+                selectedElement = findElementAt(snapped.x, snapped.y);
+                renderDrawingCanvas();
+            }
+        }
+
+        function handleDrawMove(x, y) {
+            if (!isDrawing || !drawStart) return;
+
+            const snapped = snapToGrid(x, y);
+            lastDrawPos = snapped;
+            renderDrawingCanvas();
+
+            if (currentTool === 'channel') {
+                drawingCtx.strokeStyle = '#667eea';
+                drawingCtx.lineWidth = 15;
+                drawingCtx.lineCap = 'round';
+                drawingCtx.beginPath();
+                drawingCtx.moveTo(drawStart.x, drawStart.y);
+                drawingCtx.lineTo(snapped.x, snapped.y);
+                drawingCtx.stroke();
+            }
+            else if (currentTool === 'curve') {
+                const control = {
+                    x: (drawStart.x + snapped.x) / 2,
+                    y: Math.min(drawStart.y, snapped.y) - 50
+                };
+                drawingCtx.strokeStyle = '#667eea';
+                drawingCtx.lineWidth = 15;
+                drawingCtx.lineCap = 'round';
+                drawingCtx.beginPath();
+                drawingCtx.moveTo(drawStart.x, drawStart.y);
+                drawingCtx.quadraticCurveTo(control.x, control.y, snapped.x, snapped.y);
+                drawingCtx.stroke();
+            }
+        }
+
+        function handleDrawEnd() {
+            if (!isDrawing || !drawStart || !lastDrawPos) {
+                isDrawing = false;
+                drawStart = null;
+                lastDrawPos = null;
+                return;
+            }
+
+            if (currentTool === 'channel') {
+                const dx = lastDrawPos.x - drawStart.x;
+                const dy = lastDrawPos.y - drawStart.y;
+                if (Math.sqrt(dx*dx + dy*dy) > 20) {
+                    saveState();
+                    gameState.userPattern.addElement({
+                        type: 'channel',
+                        params: { start: {...drawStart}, end: {...lastDrawPos}, width: 15 }
+                    });
+                    validateDesign();
+                    updatePreview();
+                }
+            }
+            else if (currentTool === 'curve') {
+                const dx = lastDrawPos.x - drawStart.x;
+                const dy = lastDrawPos.y - drawStart.y;
+                if (Math.sqrt(dx*dx + dy*dy) > 20) {
+                    const control = {
+                        x: (drawStart.x + lastDrawPos.x) / 2,
+                        y: Math.min(drawStart.y, lastDrawPos.y) - 50
+                    };
+                    saveState();
+                    gameState.userPattern.addElement({
+                        type: 'curve',
+                        params: { start: {...drawStart}, end: {...lastDrawPos}, control: control, width: 15 }
+                    });
+                    validateDesign();
+                    updatePreview();
+                }
+            }
+
+            renderDrawingCanvas();
+            isDrawing = false;
+            drawStart = null;
+            lastDrawPos = null;
+        }
+
+        function findElementAt(x, y) {
+            const pattern = gameState.userPattern;
+            for (let i = pattern.elements.length - 1; i >= 0; i--) {
+                const el = pattern.elements[i];
+                if (el.type === 'well') {
+                    const dx = x - el.params.center.x;
+                    const dy = y - el.params.center.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < el.params.radius + 5) {
+                        return i;
+                    }
+                }
+                // Add more element type checks as needed
+            }
+            return null;
+        }
+
+        function renderDrawingCanvas() {
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = drawingCtx;
+            if (!ctx) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 0.5;
+            const grid = gameState.userPattern?.gridSize || 20;
+            for (let x = 0; x <= canvas.width; x += grid) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= canvas.height; y += grid) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            if (!gameState.userPattern) return;
+
+            // Draw elements
+            gameState.userPattern.elements.forEach((el, index) => {
+                const isSelected = index === selectedElement;
+
+                if (el.type === 'channel') {
+                    ctx.strokeStyle = isSelected ? '#00f260' : '#667eea';
+                    ctx.lineWidth = el.params.width;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(el.params.start.x, el.params.start.y);
+                    ctx.lineTo(el.params.end.x, el.params.end.y);
+                    ctx.stroke();
+                }
+                else if (el.type === 'well') {
+                    ctx.fillStyle = isSelected ? '#00f260' : '#667eea';
+                    ctx.beginPath();
+                    ctx.arc(el.params.center.x, el.params.center.y, el.params.radius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Port label if assigned
+                    const port = gameState.portAssignments[index];
+                    if (port) {
+                        ctx.fillStyle = '#fff';
+                        ctx.font = '10px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(port.type === 'inlet' ? 'IN' : 'OUT',
+                                    el.params.center.x, el.params.center.y + 4);
+                    }
+                }
+                else if (el.type === 'curve') {
+                    ctx.strokeStyle = isSelected ? '#00f260' : '#667eea';
+                    ctx.lineWidth = el.params.width;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(el.params.start.x, el.params.start.y);
+                    ctx.quadraticCurveTo(
+                        el.params.control.x, el.params.control.y,
+                        el.params.end.x, el.params.end.y
+                    );
+                    ctx.stroke();
+                }
+                else if (el.type === 'junction') {
+                    const center = el.params.center;
+                    const angles = el.params.angles;
+
+                    ctx.strokeStyle = isSelected ? '#00f260' : '#667eea';
+                    ctx.lineWidth = 15;
+                    ctx.lineCap = 'round';
+
+                    angles.forEach(angle => {
+                        ctx.beginPath();
+                        ctx.moveTo(center.x, center.y);
+                        ctx.lineTo(
+                            center.x + Math.cos(angle) * 40,
+                            center.y + Math.sin(angle) * 40
+                        );
+                        ctx.stroke();
+                    });
+
+                    ctx.fillStyle = isSelected ? '#00f260' : '#667eea';
+                    ctx.beginPath();
+                    ctx.arc(center.x, center.y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // Draw detection zones
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            gameState.detectionZones.forEach(zone => {
+                ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
+            });
+            ctx.setLineDash([]);
+        }
+
+        function updatePreview() {
+            if (!gameState.userPattern || !previewScene) return;
+
+            // Clear previous preview
+            while (previewScene.children.length > 2) {
+                previewScene.remove(previewScene.children[previewScene.children.length - 1]);
+            }
+
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x667eea,
+                roughness: 0.3,
+                metalness: 0.1
+            });
+
+            const pattern3D = convertPatternTo3D(gameState.userPattern, material, 0.1);
+            previewScene.add(pattern3D);
+
+            // Add base plate
+            const baseMaterial = new THREE.MeshStandardMaterial({
+                color: 0x2d3436,
+                roughness: 0.8
+            });
+            const base = new THREE.Mesh(
+                new THREE.BoxGeometry(3, 0.05, 2),
+                baseMaterial
+            );
+            base.position.y = -0.025;
+            previewScene.add(base);
+        }
+
+        function saveState() {
+            gameState.undoStack.push(gameState.userPattern.clone());
+            gameState.redoStack = [];
+            if (gameState.undoStack.length > 50) {
+                gameState.undoStack.shift();
+            }
+        }
+
+        function undo() {
+            if (gameState.undoStack.length === 0) return;
+            gameState.redoStack.push(gameState.userPattern.clone());
+            gameState.userPattern = gameState.undoStack.pop();
+            renderDrawingCanvas();
+            updatePreview();
+            validateDesign();
+        }
+
+        function redo() {
+            if (gameState.redoStack.length === 0) return;
+            gameState.undoStack.push(gameState.userPattern.clone());
+            gameState.userPattern = gameState.redoStack.pop();
+            renderDrawingCanvas();
+            updatePreview();
+            validateDesign();
+        }
+
+        // ===========================================
+        // VALIDATION
+        // ===========================================
+        function validateDesign() {
+            if (!gameState.selectedTask || !gameState.userPattern) return;
+
+            const task = TASKS[gameState.selectedTask];
+            const reqs = task.requirements;
+            const pattern = gameState.userPattern;
+
+            const wells = pattern.getWells();
+            const inlets = Object.values(gameState.portAssignments).filter(p => p.type === 'inlet').length;
+            const outlets = Object.values(gameState.portAssignments).filter(p => p.type === 'outlet').length;
+
+            const validations = [
+                {
+                    label: `Wells placed (${wells.length}/${reqs.minInlets + reqs.minOutlets})`,
+                    pass: wells.length >= reqs.minInlets + reqs.minOutlets
+                },
+                {
+                    label: 'Elements connected',
+                    pass: pattern.hasConnection()
+                }
+            ];
+
+            if (reqs.needsSerpentine) {
+                validations.push({
+                    label: 'Serpentine mixing channel',
+                    pass: pattern.hasSerpentine()
+                });
+            }
+
+            if (reqs.needsBifurcation) {
+                validations.push({
+                    label: 'Y-junction for sorting',
+                    pass: pattern.hasBifurcation()
+                });
+            }
+
+            if (reqs.needsDetectionZones) {
+                validations.push({
+                    label: 'Detection zones marked',
+                    pass: gameState.detectionZones.length >= 2
+                });
+            }
+
+            // Render validation panel
+            const panel = document.getElementById('validationList');
+            panel.innerHTML = validations.map(v => `
+                <div class="validation-item">
+                    <span class="status ${v.pass ? 'pass' : 'fail'}">${v.pass ? '✓' : '✗'}</span>
+                    <span>${v.label}</span>
+                </div>
+            `).join('');
+
+            // Enable/disable proceed button
+            const allPassed = validations.every(v => v.pass);
+            document.getElementById('finishDrawingBtn').disabled = !allPassed;
+
+            return allPassed;
+        }
+
+        // ===========================================
+        // SOFT LITHOGRAPHY ANIMATIONS
+        // ===========================================
+        function createSiliconWafer() {
+            const waferGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.05, 64);
+            const waferMaterial = new THREE.MeshStandardMaterial({
+                color: 0x4a5568,
+                roughness: 0.1,
+                metalness: 0.8
+            });
+            const wafer = new THREE.Mesh(waferGeometry, waferMaterial);
+            wafer.position.y = 0;
+            wafer.castShadow = true;
+            wafer.receiveShadow = true;
+            scene.add(wafer);
+            gameState.objects.wafer = wafer;
+
+            const flatGeometry = new THREE.BoxGeometry(0.3, 0.06, 0.1);
+            const flat = new THREE.Mesh(flatGeometry, waferMaterial);
+            flat.position.set(0, 0, 1.15);
+            wafer.add(flat);
+        }
+
+        function createPhotoresist() {
+            gameState.isAnimating = true;
+            const wafer = gameState.objects.wafer;
+
+            // Phase 1: Dispense - Create liquid drop
+            const dropGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+            const su8Material = new THREE.MeshStandardMaterial({
+                color: 0xf59e0b,  // SU8 amber
+                transparent: true,
+                opacity: 0.9,
+                roughness: 0.2
+            });
+            const drop = new THREE.Mesh(dropGeometry, su8Material);
+            drop.position.set(0, 1.5, 0);  // Start above wafer
+            scene.add(drop);
+
+            // Phase 2: Spreading disk (starts small, grows)
+            const spreadGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.02, 32);
+            const spreadMaterial = su8Material.clone();
+            const spreadMesh = new THREE.Mesh(spreadGeometry, spreadMaterial);
+            spreadMesh.position.y = 0.05;
+            spreadMesh.visible = false;
+            scene.add(spreadMesh);
+
+            let progress = 0;
+            let phase = 0;  // 0=dispense, 1=spread, 2=thin
+
+            const animate = () => {
+                progress += 0.02;
+
+                if (phase === 0) {
+                    // Dispense: drop falls
+                    drop.position.y = 1.5 - progress * 1.5;
+                    if (progress >= 1) {
+                        phase = 1;
+                        progress = 0;
+                        scene.remove(drop);
+                        drop.geometry.dispose();
+                        spreadMesh.visible = true;
+                    }
+                } else if (phase === 1) {
+                    // Spread: wafer spins fast, liquid spreads
+                    wafer.rotation.y += 0.5;  // Fast spin
+                    const radius = 0.1 + progress * 1.1;  // Grow to 1.2
+                    spreadMesh.geometry.dispose();
+                    spreadMesh.geometry = new THREE.CylinderGeometry(radius, radius, 0.15 - progress * 0.1, 32);
+                    spreadMesh.material.opacity = 0.9 - progress * 0.1;
+                    if (progress >= 1) {
+                        phase = 2;
+                        progress = 0;
+                    }
+                } else if (phase === 2) {
+                    // Thin: slow spin, final thinning
+                    wafer.rotation.y += 0.2;
+                    const thickness = 0.05 + (1 - progress) * 0.02;
+                    spreadMesh.geometry.dispose();
+                    spreadMesh.geometry = new THREE.CylinderGeometry(1.15, 1.15, thickness, 64);
+                    spreadMesh.material.opacity = 0.8;
+                    if (progress >= 1) {
+                        wafer.rotation.y = 0;
+                        gameState.objects.resist = spreadMesh;
+                        gameState.isAnimating = false;
+                        addScore(100);
+                        nextSoftLithoStep();
+                        return;
+                    }
+                }
+                requestAnimationFrame(animate);
+            };
+            animate();
+        }
+
+        function createUVExposure() {
+            gameState.isAnimating = true;
+
+            // UV light source
+            const uvLight = new THREE.PointLight(0x9400d3, 3, 8);
+            uvLight.position.set(0, 4, 0);
+            scene.add(uvLight);
+            gameState.objects.uvLight = uvLight;
+
+            // Photomask - dark with transparent pattern areas
+            const maskGeometry = new THREE.CylinderGeometry(1.3, 1.3, 0.02, 64);
+            const maskMaterial = new THREE.MeshStandardMaterial({
+                color: 0x1a1a1a,
+                transparent: true,
+                opacity: 0.95
+            });
+            const mask = new THREE.Mesh(maskGeometry, maskMaterial);
+            mask.position.y = 3;
+            scene.add(mask);
+            gameState.objects.mask = mask;
+
+            // Create pattern on mask (white/transparent areas)
+            const patternMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.9
+            });
+            const maskPattern = convertPatternTo3D(gameState.userPattern, patternMaterial, 0.025);
+            maskPattern.position.y = 0.01;
+            mask.add(maskPattern);
+
+            // Create "hardened" pattern layer (invisible initially, will fade in)
+            const hardenedMaterial = new THREE.MeshStandardMaterial({
+                color: 0x8B4513,  // Darker brown = hardened SU8
+                transparent: true,
+                opacity: 0,
+                emissive: 0x4a2500,
+                emissiveIntensity: 0
+            });
+            const hardenedPattern = convertPatternTo3D(gameState.userPattern, hardenedMaterial, 0.1);
+            hardenedPattern.position.y = 0.05;
+            scene.add(hardenedPattern);
+            gameState.objects.hardenedPattern = hardenedPattern;
+
+            // UV rays - more focused through pattern
+            const rays = [];
+            const rayMaterial = new THREE.MeshBasicMaterial({
+                color: 0x9400d3,
+                transparent: true,
+                opacity: 0
+            });
+            for (let i = 0; i < 30; i++) {
+                const ray = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.015, 0.015, 3, 8),
+                    rayMaterial.clone()
+                );
+                ray.position.set((Math.random() - 0.5) * 2, 1.5, (Math.random() - 0.5) * 2);
+                scene.add(ray);
+                rays.push(ray);
+            }
+            gameState.objects.uvRays = rays;
+
+            let progress = 0;
+            let phase = 0;  // 0=descend, 1=expose, 2=harden
+
+            const animate = () => {
+                progress += 0.015;
+
+                if (phase === 0) {
+                    // Mask descends
+                    mask.position.y = 3 - progress * 2.4;  // Stop at y=0.6
+                    if (progress >= 1) {
+                        phase = 1;
+                        progress = 0;
+                    }
+                } else if (phase === 1) {
+                    // UV exposure - rays pulse, light intensifies
+                    uvLight.intensity = 3 + Math.sin(progress * 15) * 1;
+                    rays.forEach((ray, i) => {
+                        ray.material.opacity = 0.4 + Math.sin(progress * 10 + i) * 0.2;
+                    });
+
+                    // Hardened pattern starts glowing
+                    hardenedPattern.traverse(child => {
+                        if (child.material) {
+                            child.material.opacity = progress * 0.8;
+                            child.material.emissiveIntensity = progress * 0.5;
+                        }
+                    });
+
+                    if (progress >= 1) {
+                        phase = 2;
+                        progress = 0;
+                    }
+                } else if (phase === 2) {
+                    // Final hardening - glow fades, solid pattern remains
+                    hardenedPattern.traverse(child => {
+                        if (child.material) {
+                            child.material.emissiveIntensity = 0.5 * (1 - progress);
+                            child.material.opacity = 0.8 + progress * 0.2;
+                        }
+                    });
+                    rays.forEach(ray => {
+                        ray.material.opacity = 0.4 * (1 - progress);
+                    });
+
+                    if (progress >= 1) {
+                        rays.forEach(ray => scene.remove(ray));
+                        scene.remove(uvLight);
+                        gameState.isAnimating = false;
+                        addScore(150);
+                        nextSoftLithoStep();
+                        return;
+                    }
+                }
+                requestAnimationFrame(animate);
+            };
+            animate();
+        }
+
+        function createDeveloping() {
+            gameState.isAnimating = true;
+            const resist = gameState.objects.resist;
+            const hardenedPattern = gameState.objects.hardenedPattern;
+            const mask = gameState.objects.mask;
+
+            // Remove mask first
+            if (mask) {
+                scene.remove(mask);
+            }
+
+            // Create developer wash effect (blue-tinted particles)
+            const washParticles = [];
+            const washMaterial = new THREE.MeshBasicMaterial({
+                color: 0x4a90d9,
+                transparent: true,
+                opacity: 0.6
+            });
+
+            for (let i = 0; i < 50; i++) {
+                const particle = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.03, 8, 8),
+                    washMaterial.clone()
+                );
+                particle.position.set(
+                    (Math.random() - 0.5) * 2.5,
+                    1 + Math.random(),
+                    (Math.random() - 0.5) * 2.5
+                );
+                particle.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.02,
+                    -0.03 - Math.random() * 0.02,
+                    (Math.random() - 0.5) * 0.02
+                );
+                scene.add(particle);
+                washParticles.push(particle);
+            }
+
+            let progress = 0;
+
+            const animate = () => {
+                progress += 0.015;
+
+                // Animate wash particles falling and spreading
+                washParticles.forEach(p => {
+                    p.position.add(p.userData.velocity);
+                    if (p.position.y < 0.1) {
+                        p.userData.velocity.y = 0;
+                        p.userData.velocity.x *= 1.05;
+                        p.userData.velocity.z *= 1.05;
+                    }
+                    p.material.opacity = 0.6 * (1 - progress * 0.5);
+                });
+
+                // Unexposed resist (the bulk resist layer) dissolves
+                if (resist) {
+                    resist.material.opacity = 0.8 * (1 - progress);
+                    // Shrink slightly to show dissolution
+                    const scale = 1 - progress * 0.1;
+                    resist.scale.set(scale, 1 - progress, scale);
+                }
+
+                // Hardened pattern stays solid and becomes more visible
+                if (hardenedPattern) {
+                    hardenedPattern.traverse(child => {
+                        if (child.material) {
+                            child.material.opacity = Math.min(1, 0.8 + progress * 0.2);
+                            child.material.color.setHex(0xb45309);  // Final SU8 color
+                        }
+                    });
+                }
+
+                if (progress >= 1) {
+                    // Cleanup
+                    washParticles.forEach(p => {
+                        scene.remove(p);
+                        p.geometry.dispose();
+                        p.material.dispose();
+                    });
+                    if (resist) {
+                        scene.remove(resist);
+                        resist.geometry.dispose();
+                        resist.material.dispose();
+                    }
+
+                    // hardenedPattern IS the final master pattern
+                    gameState.objects.masterPattern = hardenedPattern;
+
+                    gameState.isAnimating = false;
+                    addScore(150);
+                    nextSoftLithoStep();
+                    return;
+                }
+
+                requestAnimationFrame(animate);
+            };
+            animate();
+        }
+
+        function createPatternedMaster() {
+            // This function is now a fallback if hardenedPattern doesn't exist
+            if (gameState.objects.masterPattern) return;
+
+            const patternMaterial = new THREE.MeshStandardMaterial({
+                color: 0xb45309,
+                roughness: 0.4
+            });
+
+            const masterPattern = convertPatternTo3D(gameState.userPattern, patternMaterial, 0.1);
+            masterPattern.position.y = 0.02;
+            scene.add(masterPattern);
+            gameState.objects.masterPattern = masterPattern;
+        }
+
+        function createPDMSPour() {
+            gameState.isAnimating = true;
+
+            const container = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.3, 1.3, 0.8, 64, 1, true),
+                new THREE.MeshStandardMaterial({
+                    color: 0x666666,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.3
+                })
+            );
+            container.position.y = 0.4;
+            scene.add(container);
+            gameState.objects.container = container;
+
+            const pdms = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.25, 1.25, 0.01, 64),
+                new THREE.MeshStandardMaterial({
+                    color: 0xf0f0f0,
+                    transparent: true,
+                    opacity: 0.85,
+                    roughness: 0.1
+                })
+            );
+            pdms.position.y = 0.1;
+            scene.add(pdms);
+            gameState.objects.pdms = pdms;
+
+            let progress = 0;
+            const targetHeight = 0.6;
+
+            const animate = () => {
+                progress += 0.015;
+                const currentHeight = progress * targetHeight;
+                pdms.geometry.dispose();
+                pdms.geometry = new THREE.CylinderGeometry(1.25, 1.25, Math.max(0.01, currentHeight), 64);
+                pdms.position.y = 0.03 + currentHeight / 2;
+                pdms.rotation.y += 0.01;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    gameState.isAnimating = false;
+                    addScore(100);
+                    nextSoftLithoStep();
+                }
+            };
+            animate();
+        }
+
+        function createCuring() {
+            gameState.isAnimating = true;
+            const pdms = gameState.objects.pdms;
+
+            const heatIndicator = new THREE.Mesh(
+                new THREE.RingGeometry(1.4, 1.6, 32),
+                new THREE.MeshBasicMaterial({
+                    color: 0xff6b6b,
+                    transparent: true,
+                    opacity: 0,
+                    side: THREE.DoubleSide
+                })
+            );
+            heatIndicator.rotation.x = -Math.PI / 2;
+            heatIndicator.position.y = 0.01;
+            scene.add(heatIndicator);
+
+            let progress = 0;
+
+            const animate = () => {
+                progress += 0.01;
+                heatIndicator.material.opacity = 0.5 + Math.sin(progress * 10) * 0.3;
+                heatIndicator.scale.setScalar(1 + Math.sin(progress * 5) * 0.05);
+                pdms.material.opacity = 0.85 + progress * 0.1;
+                pdms.material.roughness = 0.1 + progress * 0.3;
+
+                const curedColor = new THREE.Color(0xe8e8e8);
+                pdms.material.color.lerp(curedColor, 0.01);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    scene.remove(heatIndicator);
+                    gameState.isAnimating = false;
+                    addScore(100);
+                    nextSoftLithoStep();
+                }
+            };
+            animate();
+        }
+
+        function createPeeling() {
+            gameState.isAnimating = true;
+            const pdms = gameState.objects.pdms;
+            const masterPattern = gameState.objects.masterPattern;
+            const container = gameState.objects.container;
+
+            // Create stamp with channel pattern (inverse)
+            const stampGroup = new THREE.Group();
+
+            const stampBody = pdms.clone();
+            stampBody.material = pdms.material.clone();
+            stampGroup.add(stampBody);
+
+            // Add channel impressions using user pattern
+            const impressionMaterial = new THREE.MeshStandardMaterial({
+                color: 0xd0d0d0,
+                roughness: 0.2
+            });
+            const impressions = convertPatternTo3D(gameState.userPattern, impressionMaterial, 0.12);
+            impressions.position.y = -0.25;
+            stampGroup.add(impressions);
+
+            scene.add(stampGroup);
+            gameState.objects.stamp = stampGroup;
+            scene.remove(pdms);
+
+            let progress = 0;
+
+            const animate = () => {
+                progress += 0.015;
+                stampGroup.position.y = progress * 2;
+                stampGroup.rotation.x = progress * 0.3;
+                stampGroup.position.z = progress * 0.5;
+                stampGroup.rotation.z = Math.sin(progress * 10) * 0.02;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    stampGroup.rotation.set(0, 0, 0);
+                    stampGroup.position.set(0, 2, 0);
+                    scene.remove(masterPattern);
+                    scene.remove(container);
+                    createTargetSubstrate();
+                    gameState.isAnimating = false;
+                    addScore(150);
+                    // Chain directly into bonding animation
+                    setTimeout(() => createBonding(), 500);
+                }
+            };
+            animate();
+        }
+
+        function createTargetSubstrate() {
+            const substrate = new THREE.Mesh(
+                new THREE.BoxGeometry(2.5, 0.05, 2.5),
+                new THREE.MeshStandardMaterial({
+                    color: 0x88ccff,
+                    transparent: true,
+                    opacity: 0.4,
+                    roughness: 0.1
+                })
+            );
+            substrate.position.y = 0.025;
+            scene.add(substrate);
+            gameState.objects.substrate = substrate;
+
+            const wafer = gameState.objects.wafer;
+            wafer.position.x = -3;
+            wafer.position.z = 2;
+        }
+
+        function createBonding() {
+            gameState.isAnimating = true;
+            const stamp = gameState.objects.stamp;
+            const substrate = gameState.objects.substrate;
+
+            let progress = 0;
+            let phase = 0;
+
+            const animate = () => {
+                progress += 0.02;
+
+                if (phase === 0) {
+                    // Lower stamp
+                    stamp.position.y = 2 - progress * 1.9;
+                    if (progress >= 1) {
+                        progress = 0;
+                        phase = 1;
+                    }
+                } else if (phase === 1) {
+                    // Bonding - plasma glow effect
+                    stamp.position.y = 0.1 + Math.sin(progress * Math.PI) * 0.02;
+
+                    // Add glow to stamp
+                    stamp.children.forEach(child => {
+                        if (child.material) {
+                            const glowIntensity = 0.5 + Math.sin(progress * 10) * 0.2;
+                            child.material.emissive = new THREE.Color(0x9400d3);
+                            child.material.emissiveIntensity = glowIntensity * (1 - progress);
+                        }
+                    });
+
+                    if (progress >= 1) {
+                        progress = 0;
+                        phase = 2;
+                        createFinalDevice();
+                    }
+                } else if (phase === 2) {
+                    // Final positioning
+                    stamp.position.y = 0.06;
+
+                    stamp.children.forEach(child => {
+                        if (child.material) {
+                            child.material.emissive = new THREE.Color(0x000000);
+                            child.material.emissiveIntensity = 0;
+                        }
+                    });
+
+                    if (progress >= 0.5) {
+                        gameState.isAnimating = false;
+                        addScore(200);
+                        // Move to port configuration
+                        setPhase(3);
+                        return;
+                    }
+                }
+
+                requestAnimationFrame(animate);
+            };
+            animate();
+        }
+
+        function createFinalDevice() {
+            // The stamp is now bonded - it becomes the final microfluidic device
+            const stamp = gameState.objects.stamp;
+
+            // Change material to show bonded PDMS on glass
+            stamp.children.forEach(child => {
+                if (child.material) {
+                    child.material.transparent = true;
+                    child.material.opacity = 0.9;
+                }
+            });
+
+            gameState.objects.finalDevice = stamp;
+        }
+
+        // ===========================================
+        // PORT CONFIGURATION
+        // ===========================================
+        function setupPortConfiguration() {
+            const wells = gameState.userPattern.getWells();
+            const task = TASKS[gameState.selectedTask];
+
+            // Reset port assignments
+            gameState.portAssignments = {};
+
+            const portList = document.getElementById('portList');
+            portList.innerHTML = wells.map((well, index) => {
+                const elemIndex = gameState.userPattern.elements.indexOf(well);
+                return `
+                    <div class="port-item" data-well="${elemIndex}">
+                        <h5>
+                            <span class="color-dot" style="background: #667eea"></span>
+                            Well ${index + 1}
+                        </h5>
+                        <select class="port-type" data-well="${elemIndex}">
+                            <option value="">Select type...</option>
+                            <option value="inlet">Inlet</option>
+                            <option value="outlet">Outlet</option>
+                        </select>
+                        <select class="port-reagent" data-well="${elemIndex}" style="display: none;">
+                            <option value="">Select reagent...</option>
+                            ${task.reagents.map(r => `<option value="${r.id}">${r.name}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }).join('');
+
+            // Add event listeners
+            document.querySelectorAll('.port-type').forEach(select => {
+                select.addEventListener('change', function() {
+                    const wellIndex = parseInt(this.dataset.well);
+                    const type = this.value;
+                    const reagentSelect = this.parentElement.querySelector('.port-reagent');
+
+                    if (type === 'inlet') {
+                        reagentSelect.style.display = 'block';
+                    } else {
+                        reagentSelect.style.display = 'none';
+                    }
+
+                    updatePortAssignment(wellIndex, type, null);
+                });
+            });
+
+            document.querySelectorAll('.port-reagent').forEach(select => {
+                select.addEventListener('change', function() {
+                    const wellIndex = parseInt(this.dataset.well);
+                    const reagentId = this.value;
+                    const type = this.parentElement.querySelector('.port-type').value;
+
+                    updatePortAssignment(wellIndex, type, reagentId);
+                });
+            });
+
+            // Make 3D wells clickable
+            enableWellSelection();
+        }
+
+        function updatePortAssignment(wellIndex, type, reagentId) {
+            const task = TASKS[gameState.selectedTask];
+            const reagent = task.reagents.find(r => r.id === reagentId);
+
+            gameState.portAssignments[wellIndex] = {
+                type: type,
+                reagent: reagentId,
+                color: reagent ? reagent.color : 0x667eea
+            };
+
+            // Update 3D visualization
+            updateWellColors();
+            validatePortConfig();
+        }
+
+        function updateWellColors() {
+            const wells = gameState.userPattern.getWells();
+            const finalDevice = gameState.objects.finalDevice || gameState.objects.stamp;
+
+            if (!finalDevice) return;
+
+            // This would update the 3D well colors based on assignments
+            // For simplicity, we'll update on next render
+        }
+
+        function enableWellSelection() {
+            // Add raycaster for well selection in 3D view
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            renderer.domElement.addEventListener('click', (event) => {
+                if (gameState.currentPhase !== 3) return;
+
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+
+                const finalDevice = gameState.objects.finalDevice || gameState.objects.stamp;
+                if (finalDevice) {
+                    const intersects = raycaster.intersectObjects(finalDevice.children, true);
+                    if (intersects.length > 0) {
+                        // Highlight selected well
+                        console.log('Clicked on device element');
+                    }
+                }
+            });
+        }
+
+        function validatePortConfig() {
+            const task = TASKS[gameState.selectedTask];
+            const assignments = Object.values(gameState.portAssignments);
+
+            const inlets = assignments.filter(a => a.type === 'inlet');
+            const outlets = assignments.filter(a => a.type === 'outlet');
+            const hasReagents = inlets.every(i => i.reagent);
+
+            const valid = inlets.length >= task.requirements.minInlets &&
+                         outlets.length >= task.requirements.minOutlets &&
+                         hasReagents;
+
+            document.getElementById('finishPortConfigBtn').disabled = !valid;
+            return valid;
+        }
+
+        // ===========================================
+        // FLOW SIMULATION
+        // ===========================================
+        class FlowParticle {
+            constructor(position, velocity, type, color, reagentMix = 0) {
+                this.position = position.clone();
+                this.velocity = velocity.clone();
+                this.type = type;
+                this.color = color;
+                this.size = type === 'cell_large' ? 0.08 : type === 'cell_small' ? 0.04 : 0.03;
+                this.reagentMix = reagentMix;
+                this.age = 0;
+                this.maxAge = 500;
+            }
+        }
+
+        let particleSystem;
+        let particleGeometry;
+        let particleMaterial;
+
+        function initFlowSimulation() {
+            gameState.flowState = {
+                particles: [],
+                efficiency: 0,
+                throughput: 0,
+                isRunning: true,
+                speed: 1,
+                time: 0
+            };
+
+            // Make device transparent for visualization
+            const device = gameState.objects.finalDevice || gameState.objects.stamp || gameState.objects.pdms;
+            if (device) {
+                device.traverse(child => {
+                    if (child.material) {
+                        child.material.transparent = true;
+                        child.material.opacity = 0.3;
+                    }
+                });
+            }
+
+            // Create instanced particle system
+            const maxParticles = 500;
+            particleGeometry = new THREE.SphereGeometry(0.03, 8, 8);
+            particleMaterial = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
+
+            // Create particle mesh pool
+            gameState.flowState.particleMeshes = [];
+            for (let i = 0; i < maxParticles; i++) {
+                const mesh = new THREE.Mesh(particleGeometry, particleMaterial.clone());
+                mesh.visible = false;
+                mesh.renderOrder = 999;
+                mesh.material.depthTest = true;
+                scene.add(mesh);
+                gameState.flowState.particleMeshes.push(mesh);
+            }
+
+            // Start particle spawning
+            gameState.flowState.spawnInterval = setInterval(() => {
+                if (gameState.flowState.isRunning && gameState.flowState.particles.length < maxParticles) {
+                    spawnParticles();
+                }
+            }, 100);
+        }
+
+        function spawnParticles() {
+            const task = TASKS[gameState.selectedTask];
+            const wells = gameState.userPattern.getWells();
+            const scale = 3 / 600;
+
+            // Spawn from each inlet
+            Object.entries(gameState.portAssignments).forEach(([wellIndex, config]) => {
+                if (config.type !== 'inlet') return;
+
+                const wellElement = gameState.userPattern.elements[parseInt(wellIndex)];
+                if (!wellElement || wellElement.type !== 'well') return;
+
+                const reagent = task.reagents.find(r => r.id === config.reagent);
+                const color = reagent ? reagent.color : 0x3b82f6;
+
+                const x = (wellElement.params.center.x - 300) * scale;
+                const z = (wellElement.params.center.y - 200) * scale;
+
+                // Determine particle type based on task
+                let particleType = 'fluid';
+                if (gameState.selectedTask === 'sorter' && config.reagent === 'cells') {
+                    particleType = Math.random() > 0.5 ? 'cell_large' : 'cell_small';
+                }
+
+                const particle = new FlowParticle(
+                    new THREE.Vector3(x + (Math.random() - 0.5) * 0.1, 0.15, z + (Math.random() - 0.5) * 0.1),
+                    new THREE.Vector3((Math.random() - 0.5) * 0.02, 0, (Math.random() - 0.5) * 0.02),
+                    particleType,
+                    color,
+                    config.reagent === task.reagents[0].id ? 0 : 1
+                );
+
+                gameState.flowState.particles.push(particle);
+            });
+        }
+
+        function updateFlowSimulation(deltaTime) {
+            if (!gameState.flowState.isRunning) return;
+
+            const speed = gameState.flowState.speed;
+            const scale = 3 / 600;
+            const task = TASKS[gameState.selectedTask];
+
+            gameState.flowState.time += deltaTime * speed;
+
+            // Update particles
+            const particlesToRemove = [];
+
+            gameState.flowState.particles.forEach((particle, index) => {
+                particle.age += deltaTime * speed;
+
+                // Simple flow field - move along channels
+                const flowDir = calculateFlowDirection(particle.position, scale);
+                particle.velocity.add(flowDir.multiplyScalar(0.001 * speed));
+                particle.velocity.multiplyScalar(0.98); // Drag
+
+                particle.position.add(particle.velocity.clone().multiplyScalar(speed));
+
+                // Mixing calculation (for mixer task)
+                if (gameState.selectedTask === 'mixer') {
+                    // Diffusion-based mixing
+                    const nearbyParticles = gameState.flowState.particles.filter(p =>
+                        p !== particle && particle.position.distanceTo(p.position) < 0.1
+                    );
+
+                    nearbyParticles.forEach(other => {
+                        const mixRate = 0.01 * speed;
+                        const avgMix = (particle.reagentMix + other.reagentMix) / 2;
+                        particle.reagentMix += (avgMix - particle.reagentMix) * mixRate;
+                    });
+                }
+
+                // Cell sorting (for sorter task)
+                if (gameState.selectedTask === 'sorter') {
+                    // Size-based lateral migration
+                    if (particle.type === 'cell_large') {
+                        particle.velocity.x += 0.002 * speed;
+                    } else if (particle.type === 'cell_small') {
+                        particle.velocity.x -= 0.001 * speed;
+                    }
+                }
+
+                // Remove old particles
+                if (particle.age > particle.maxAge) {
+                    particlesToRemove.push(index);
+                    gameState.flowState.throughput++;
+                }
+            });
+
+            // Remove dead particles
+            particlesToRemove.reverse().forEach(index => {
+                gameState.flowState.particles.splice(index, 1);
+            });
+
+            // Update 3D visualization
+            updateParticleMeshes();
+
+            // Calculate metrics
+            calculateMetrics();
+
+            // Update UI
+            updateMetricsUI();
+        }
+
+        function calculateFlowDirection(position, scale) {
+            // Simple flow field based on channel layout
+            const channels = gameState.userPattern.getChannels();
+            let flowDir = new THREE.Vector3(0, 0, 0);
+            let totalWeight = 0;
+
+            channels.forEach(channel => {
+                if (channel.type === 'channel') {
+                    const start = new THREE.Vector3(
+                        (channel.params.start.x - 300) * scale,
+                        0,
+                        (channel.params.start.y - 200) * scale
+                    );
+                    const end = new THREE.Vector3(
+                        (channel.params.end.x - 300) * scale,
+                        0,
+                        (channel.params.end.y - 200) * scale
+                    );
+
+                    const channelDir = end.clone().sub(start).normalize();
+                    const channelCenter = start.clone().add(end).multiplyScalar(0.5);
+                    const dist = position.distanceTo(channelCenter);
+
+                    if (dist < 0.3) {
+                        const weight = 1 / (dist + 0.1);
+                        flowDir.add(channelDir.multiplyScalar(weight));
+                        totalWeight += weight;
+                    }
+                }
+            });
+
+            if (totalWeight > 0) {
+                flowDir.divideScalar(totalWeight);
+            }
+
+            return flowDir;
+        }
+
+        function updateParticleMeshes() {
+            const meshes = gameState.flowState.particleMeshes;
+            const particles = gameState.flowState.particles;
+
+            meshes.forEach((mesh, i) => {
+                if (i < particles.length) {
+                    const p = particles[i];
+                    mesh.visible = true;
+                    mesh.position.copy(p.position);
+                    mesh.scale.setScalar(p.size / 0.03);
+
+                    // Color based on mixing or type
+                    if (gameState.selectedTask === 'mixer') {
+                        const color = new THREE.Color();
+                        color.setHex(0x3b82f6).lerp(new THREE.Color(0xf97316), p.reagentMix);
+                        mesh.material.color = color;
+                    } else {
+                        mesh.material.color.setHex(p.color);
+                    }
+                } else {
+                    mesh.visible = false;
+                }
+            });
+        }
+
+        function calculateMetrics() {
+            const task = TASKS[gameState.selectedTask];
+            const particles = gameState.flowState.particles;
+
+            if (gameState.selectedTask === 'mixer') {
+                // For mixer: measure how uniform the reagentMix values are
+                // Perfect mixing = all particles at ~0.5, low variance = high efficiency
+                // Unmixed = particles at 0 or 1, high variance = low efficiency
+                if (particles.length > 1) {
+                    const avgMix = particles.reduce((sum, p) => sum + p.reagentMix, 0) / particles.length;
+                    const variance = particles.reduce((sum, p) => sum + Math.pow(p.reagentMix - avgMix, 2), 0) / particles.length;
+                    // Max variance for binary 0/1 distribution centered at 0.5 is 0.25
+                    // When fully mixed (all at 0.5), variance approaches 0
+                    // Efficiency = 100% when variance = 0, 0% when variance = 0.25
+                    const maxVariance = 0.25;
+                    gameState.flowState.efficiency = Math.max(0, Math.min(100, (1 - Math.sqrt(variance / maxVariance)) * 100));
+                }
+            }
+            else if (gameState.selectedTask === 'sorter') {
+                // Sorting purity: % of large cells on one side, small on other
+                const largeCells = particles.filter(p => p.type === 'cell_large');
+                const smallCells = particles.filter(p => p.type === 'cell_small');
+
+                if (largeCells.length > 0 && smallCells.length > 0) {
+                    const largeRight = largeCells.filter(p => p.position.x > 0).length;
+                    const smallLeft = smallCells.filter(p => p.position.x <= 0).length;
+                    gameState.flowState.efficiency = ((largeRight / largeCells.length + smallLeft / smallCells.length) / 2) * 100;
+                }
+            }
+            else if (gameState.selectedTask === 'covid') {
+                // Detection coverage: particles passing through detection zones
+                gameState.flowState.efficiency = Math.min(100, gameState.flowState.throughput / 10);
+            }
+        }
+
+        function updateMetricsUI() {
+            const task = TASKS[gameState.selectedTask];
+            const flow = gameState.flowState;
+
+            document.querySelector('#primaryMetric .label').textContent = task.metrics.primaryLabel;
+            document.querySelector('#primaryMetric .value').textContent = Math.round(flow.efficiency) + '%';
+            document.querySelector('#primaryMetric .bar-fill').style.width = flow.efficiency + '%';
+
+            document.querySelector('#secondaryMetric .value').textContent = flow.throughput;
+            document.querySelector('#timeMetric .value').textContent = (flow.time / 1000).toFixed(1) + 's';
+        }
+
+        function cleanupFlowSimulation() {
+            if (gameState.flowState.spawnInterval) {
+                clearInterval(gameState.flowState.spawnInterval);
+            }
+
+            if (gameState.flowState.particleMeshes) {
+                gameState.flowState.particleMeshes.forEach(mesh => {
+                    scene.remove(mesh);
+                });
+            }
+        }
+
+        // ===========================================
+        // PHASE MANAGEMENT
+        // ===========================================
+        function setPhase(phase) {
+            gameState.currentPhase = phase;
+
+            // Hide all overlays
+            document.getElementById('taskModal').style.display = 'none';
+            document.getElementById('drawingInterface').style.display = 'none';
+            document.getElementById('portConfigOverlay').style.display = 'none';
+            document.getElementById('flowSimOverlay').style.display = 'none';
+            document.getElementById('completionModal').style.display = 'none';
+            document.getElementById('instructions').style.display = 'block';
+            document.getElementById('actionBtn').style.display = 'none';
+            document.getElementById('infoPanel').style.display = 'block';
+
+            const task = gameState.selectedTask ? TASKS[gameState.selectedTask] : null;
+
+            switch(phase) {
+                case 0: // Task Selection
+                    document.getElementById('taskModal').style.display = 'flex';
+                    document.getElementById('phaseIndicator').textContent = 'Select Task';
+                    document.getElementById('progressBar').style.width = '0%';
+                    break;
+
+                case 1: // Drawing
+                    document.getElementById('drawingInterface').style.display = 'block';
+                    document.getElementById('instructions').style.display = 'none';
+                    document.getElementById('infoPanel').style.display = 'none';
+                    document.getElementById('phaseIndicator').textContent = 'Design Channel Layout';
+                    document.getElementById('progressBar').style.width = '16%';
+                    initDrawingCanvas();
+                    if (task) {
+                        document.getElementById('conceptsList').innerHTML =
+                            task.concepts.map(c => `<li>${c}</li>`).join('');
+                    }
+                    break;
+
+                case 2: // Soft Lithography
+                    document.getElementById('phaseIndicator').textContent = 'Soft Lithography';
+                    document.getElementById('actionBtn').style.display = 'block';
+                    document.getElementById('progressBar').style.width = '33%';
+                    gameState.softLithoStep = 0;
+                    clearScene();
+                    createSiliconWafer();
+                    updateSoftLithoUI();
+                    break;
+
+                case 3: // Port Configuration
+                    document.getElementById('portConfigOverlay').style.display = 'block';
+                    document.getElementById('phaseIndicator').textContent = 'Configure Ports';
+                    document.getElementById('progressBar').style.width = '66%';
+                    document.getElementById('stepTitle').textContent = 'Configure Inlet and Outlet Ports';
+                    document.getElementById('stepDescription').textContent =
+                        'Assign each well as an inlet or outlet, and select the reagent for each inlet.';
+                    document.getElementById('stepHint').textContent =
+                        'Click wells in the 3D view or use the panel on the right.';
+                    setupPortConfiguration();
+                    break;
+
+                case 4: // Flow Simulation
+                    document.getElementById('flowSimOverlay').style.display = 'block';
+                    document.getElementById('phaseIndicator').textContent = 'Flow Simulation';
+                    document.getElementById('progressBar').style.width = '83%';
+                    document.getElementById('stepTitle').textContent = 'Microfluidic Flow Simulation';
+                    document.getElementById('stepDescription').textContent =
+                        'Watch the fluid dynamics in your device. Particles show flow patterns and mixing.';
+                    document.getElementById('stepHint').textContent =
+                        'Use controls to adjust speed or reset the simulation.';
+                    initFlowSimulation();
+                    break;
+
+                case 5: // Complete
+                    cleanupFlowSimulation();
+                    showCompletion();
+                    break;
+            }
+        }
+
+        function clearScene() {
+            Object.values(gameState.objects).forEach(obj => {
+                if (obj) {
+                    if (Array.isArray(obj)) {
+                        obj.forEach(o => scene.remove(o));
+                    } else {
+                        scene.remove(obj);
+                    }
+                }
+            });
+            gameState.objects = {};
+        }
+
+        function nextSoftLithoStep() {
+            gameState.softLithoStep++;
+            if (gameState.softLithoStep < softLithoSteps.length) {
+                updateSoftLithoUI();
+                document.getElementById('actionBtn').disabled = false;
+            }
+        }
+
+        function updateSoftLithoUI() {
+            const step = softLithoSteps[gameState.softLithoStep];
+            document.getElementById('stepTitle').textContent = step.title;
+            document.getElementById('stepDescription').textContent = step.description;
+            document.getElementById('stepHint').textContent = step.hint;
+            document.getElementById('actionBtn').textContent = step.action;
+            document.getElementById('conceptsList').innerHTML =
+                step.concepts.map(c => `<li>${c}</li>`).join('');
+
+            const progress = 33 + (gameState.softLithoStep / softLithoSteps.length) * 33;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function performSoftLithoAction() {
+            if (gameState.isAnimating) return;
+            document.getElementById('actionBtn').disabled = true;
+
+            switch(gameState.softLithoStep) {
+                case 0: createPhotoresist(); break;
+                case 1: createUVExposure(); break;
+                case 2: createDeveloping(); break;
+                case 3: createPDMSPour(); break;
+                case 4: createCuring(); break;
+                case 5: createPeeling(); break;
+                case 6: createBonding(); break;
+            }
+        }
+
+        // ===========================================
+        // SCORING & COMPLETION
+        // ===========================================
+        function addScore(points) {
+            gameState.score += points;
+            document.getElementById('score').textContent = gameState.score;
+            const scoreEl = document.getElementById('score');
+            scoreEl.style.transform = 'scale(1.2)';
+            setTimeout(() => scoreEl.style.transform = 'scale(1)', 200);
+        }
+
+        function showCompletion() {
+            const task = TASKS[gameState.selectedTask];
+            const efficiency = gameState.flowState.efficiency;
+            const timeTaken = Date.now() - gameState.startTime;
+            const timeBonus = Math.max(0, Math.floor(1000 - timeTaken / 1000));
+
+            const designScore = gameState.userPattern.elements.length * 10;
+            const fabScore = 750; // Base fabrication score
+            const efficiencyBonus = Math.floor(efficiency * 5);
+
+            const totalScore = gameState.score + designScore + efficiencyBonus + timeBonus;
+
+            document.getElementById('completionTaskName').textContent = task.name;
+            document.getElementById('finalScore').textContent = totalScore;
+            document.getElementById('designScore').textContent = designScore;
+            document.getElementById('efficiencyScore').textContent = Math.round(efficiency) + '%';
+            document.getElementById('fabScore').textContent = fabScore;
+            document.getElementById('timeBonus').textContent = timeBonus;
+
+            document.getElementById('completionModal').style.display = 'flex';
+            document.getElementById('progressBar').style.width = '100%';
+        }
+
+        // ===========================================
+        // EVENT LISTENERS
+        // ===========================================
+        function setupEventListeners() {
+            // Task selection
+            document.querySelectorAll('.task-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('.task-card').forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    this.classList.toggle('expanded');
+                    gameState.selectedTask = this.dataset.task;
+                    document.getElementById('beginDesignBtn').classList.add('active');
+                });
+            });
+
+            document.getElementById('beginDesignBtn').addEventListener('click', () => {
+                if (gameState.selectedTask) {
+                    gameState.startTime = Date.now();
+                    setPhase(1);
+                }
+            });
+
+            // Drawing tools
+            document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTool = this.dataset.tool;
+                });
+            });
+
+            document.getElementById('undoBtn').addEventListener('click', undo);
+            document.getElementById('redoBtn').addEventListener('click', redo);
+
+            document.getElementById('clearDrawingBtn').addEventListener('click', () => {
+                if (confirm('Clear all elements?')) {
+                    saveState();
+                    gameState.userPattern.clear();
+                    renderDrawingCanvas();
+                    updatePreview();
+                    validateDesign();
+                }
+            });
+
+            document.getElementById('finishDrawingBtn').addEventListener('click', () => {
+                setPhase(2);
+            });
+
+            // Soft lithography action
+            document.getElementById('actionBtn').addEventListener('click', () => {
+                if (gameState.currentPhase === 2) {
+                    performSoftLithoAction();
+                }
+            });
+
+            // Port configuration
+            document.getElementById('finishPortConfigBtn').addEventListener('click', () => {
+                setPhase(4);
+            });
+
+            // Flow simulation controls
+            document.getElementById('playPauseBtn').addEventListener('click', function() {
+                gameState.flowState.isRunning = !gameState.flowState.isRunning;
+                this.textContent = gameState.flowState.isRunning ? '⏸ Pause' : '▶ Play';
+            });
+
+            document.getElementById('speedSlider').addEventListener('input', function() {
+                gameState.flowState.speed = parseFloat(this.value);
+            });
+
+            document.getElementById('resetSimBtn').addEventListener('click', () => {
+                cleanupFlowSimulation();
+                initFlowSimulation();
+            });
+
+            document.getElementById('finishSimBtn').addEventListener('click', () => {
+                setPhase(5);
+            });
+
+            // Restart
+            document.getElementById('restartBtn').addEventListener('click', restartGame);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === 'z') {
+                        e.preventDefault();
+                        if (e.shiftKey) redo();
+                        else undo();
+                    }
+                }
+                if (e.key === 'Delete' && selectedElement !== null) {
+                    saveState();
+                    gameState.userPattern.removeElement(selectedElement);
+                    selectedElement = null;
+                    renderDrawingCanvas();
+                    updatePreview();
+                    validateDesign();
+                }
+            });
+        }
+
+        function restartGame() {
+            cleanupFlowSimulation();
+            clearScene();
+
+            gameState.currentPhase = 0;
+            gameState.selectedTask = null;
+            gameState.softLithoStep = 0;
+            gameState.score = 0;
+            gameState.isAnimating = false;
+            gameState.userPattern = null;
+            gameState.portAssignments = {};
+            gameState.detectionZones = [];
+            gameState.undoStack = [];
+            gameState.redoStack = [];
+
+            document.getElementById('score').textContent = '0';
+            document.querySelectorAll('.task-card').forEach(c => {
+                c.classList.remove('selected', 'expanded');
+            });
+            document.getElementById('beginDesignBtn').classList.remove('active');
+
+            createLabEnvironment();
+            setPhase(0);
+        }
+
+        // ===========================================
+        // ANIMATION LOOP
+        // ===========================================
+        let lastTime = 0;
+
+        function animate(currentTime = 0) {
+            animationId = requestAnimationFrame(animate);
+
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            controls.update();
+
+            // Update flow simulation if in that phase
+            if (gameState.currentPhase === 4) {
+                updateFlowSimulation(deltaTime);
+            }
+
+            // Render main scene
+            renderer.render(scene, camera);
+
+            // Render preview scene if visible
+            if (gameState.currentPhase === 1 && previewRenderer) {
+                previewCamera.position.x = Math.sin(currentTime * 0.0005) * 4;
+                previewCamera.position.z = Math.cos(currentTime * 0.0005) * 4;
+                previewCamera.lookAt(0, 0, 0);
+                previewRenderer.render(previewScene, previewCamera);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // ===========================================
+        // INITIALIZE
+        // ===========================================
+        init();
+        setPhase(0);
+    </script>
+</body>
+</html>
